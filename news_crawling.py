@@ -1,79 +1,101 @@
+import psycopg2
 import os
+from dotenv import load_dotenv
 import feedparser
 import requests
 from bs4 import BeautifulSoup
-import psycopg2
 from datetime import datetime
 
-# RSS 피드 URL
-RSS_FEED_URL = "https://www.khan.co.kr/rss/rssdata/total_news.xml"
+# 환경변수 불러오기
+load_dotenv()
 
-# PostgreSQL 연결 설정
-conn = psycopg2.connect(
-    host = "localhost",
-    dbname = "news",
-    user = os.getenv("DB_USERNAME"),
-    password = os.getenv("DB_PASSWORD")
-)
-cur = conn.cursor()
+def save_to_db(data):
+    conn = psycopg2.connect(
+        host = "localhost",
+        dbname = 'news',
+        user = os.getenv("DB_USERNAME"),
+        password = os.getenv("DB_PASSWORD")
+    )
+    cur = conn.cursor()
 
-def extract_article_data(link):
-    try:
-        response = requests.get(link)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+    insert_query = """
+    INSERT INTO news_article (title, writer, write_date, category, content, url)
+    VALUES (%s, %s, %s, %s, %s, %s)
+    ON CONFLICT (url) DO NOTHING;
+    """
+    cur.execute(insert_query, (
+        data['title'],
+        data['writer'],
+        data['write_date'],
+        data['category'],
+        data['content'],
+        data['url']
+    ))
 
-        # 예시 기준 (경향신문): 제목, 작성자, 날짜, 본문, 카테고리 추출
-        title = soup.select_one("h1#article_title").get_text(strip=True)
-        writer = soup.select_one("p.byline").get_text(strip=True).replace("기자", "").strip()
-        date_str = soup.select_one("span.date01").get_text(strip=True)
-        write_date = datetime.strptime(date_str, "%Y.%m.%d %H:%M")  # 날짜 포맷 확인 필요
-        category = soup.select_one("div.location a:nth-of-type(2)").get_text(strip=True)
-        content = "\n".join([p.get_text(strip=True) for p in soup.select("div.art_body > p")])
-
-        return {
-            "title": title,
-            "writer": writer,
-            "write_date": write_date,
-            "category": category,
-            "content": content
-        }
-
-    except Exception as e:
-        print(f"[Error] {link} 파싱 실패: {e}")
-        return None
-
-def main():
-    feed = feedparser.parse(RSS_FEED_URL)
-
-    for entry in feed.entries:
-        url = entry.link
-        print(f"처리 중: {url}")
-
-        article = extract_article_data(url)
-        if not article:
-            continue
-
-        try:
-            cur.execute("""
-                INSERT INTO news_article (title, writer, write_date, category, content, url)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (url) DO NOTHING
-            """, (
-                article["title"],
-                article["writer"],
-                article["write_date"],
-                article["category"],
-                article["content"],
-                url
-            ))
-            conn.commit()
-        except Exception as e:
-            print(f"[DB Error] 저장 실패: {e}")
-            conn.rollback()
-
+    conn.commit()
     cur.close()
     conn.close()
+
+
+# RSS 피드 URL (예: Khan 뉴스 RSS)
+RSS_FEED_URL = "https://www.khan.co.kr/rss/rssdata/total_news.xml"
+
+def clean_writer(raw_writer):
+    # '기자'를 기준으로 자르고 공백 제거
+    if "기자" in raw_writer:
+        return raw_writer.split("기자")[0].strip()
+    return raw_writer.strip()
+
+def format_date(iso_date_str):
+    try:
+        dt = datetime.fromisoformat(iso_date_str)
+        return dt.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return "날짜 형식 오류"
+    
+def crawl_article(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    content_tag = soup.find_all('p', class_ = "content_text text-l")
+    if not content_tag:
+        return "본문 없음"  # ← 예외 처리 추가
+    
+    content_text = "\n\n".join([tag.text.strip() for tag in content_tag])
+    return content_text
+
+def main():
+    print('RSS 피드를 확인하는 중 ...')
+    feed = feedparser.parse(RSS_FEED_URL)
+    
+    for entry in feed.entries:
+        title = entry.get("title", '제목없음')
+        writer = clean_writer(entry.get("author", "작성자 없음"))
+        write_date = format_date(entry.get("date", "날짜 없음"))
+        category = entry.get("category", "카테고리 없음")
+        url = entry.link
+        content = crawl_article(url)
+        print(url)
+        print(title)
+        print(writer)
+        print(write_date)
+        print(category)
+        print(content)
+
+        # DB에 저장
+        data = {
+            "title": title,
+            "writer": writer,
+            "write_date": write_date if write_date != "날짜 형식 오류" else None,
+            "category": category,
+            "content": content,
+            "url": url
+        }
+        save_to_db(data)
 
 if __name__ == "__main__":
     main()
