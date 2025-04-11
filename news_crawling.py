@@ -9,15 +9,16 @@ from datetime import datetime
 # 환경변수 불러오기
 load_dotenv()
 
-def save_to_db(data):
-    conn = psycopg2.connect(
+conn = psycopg2.connect(
         host = "localhost",
         dbname = 'news',
         user = os.getenv("DB_USERNAME"),
         password = os.getenv("DB_PASSWORD")
     )
-    cur = conn.cursor()
+cur = conn.cursor()
 
+
+def save_to_db(data):
     insert_query = """
     INSERT INTO news_article (title, writer, write_date, category, content, url)
     VALUES (%s, %s, %s, %s, %s, %s)
@@ -33,8 +34,6 @@ def save_to_db(data):
     ))
 
     conn.commit()
-    cur.close()
-    conn.close()
 
 
 # RSS 피드 URL (예: Khan 뉴스 RSS)
@@ -96,6 +95,10 @@ def main():
             "url": url
         }
         save_to_db(data)
+
+    cur.close()
+    conn.close()
+
 
 if __name__ == "__main__":
     main()
