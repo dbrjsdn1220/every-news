@@ -98,3 +98,5 @@ conn = psycopg2.connect(
 
 
 
+Token Authentication 사용 안하면 CSRF 토큰이 필요함. CSRF는 교차 사이트 요청 위조라고 서버가 클라이언트에게 고유한 키를 줘서 <br>
+위조된 사용자가 아닌지 확인하는 과정.
