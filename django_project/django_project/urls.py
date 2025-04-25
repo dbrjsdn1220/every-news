@@ -21,5 +21,7 @@ from news import urls
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("news/", include('news.urls'))
+    path("news/", include('news.urls')),
+    path("accounts/", include('dj_rest_auth.urls')),
+    path('accounts/signup/', include('dj_rest_auth.registration.urls')),
 ]
