@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 conn = psycopg2.connect(
-    host = "localhost",
-    dbname = "news",
-    user = os.getenv("DB_USERNAME"),
-    password = os.getenv("DB_PASSWORD")
+    host="localhost",
+    dbname="news",
+    user=os.getenv("DB_USERNAME"),
+    password=os.getenv("DB_PASSWORD"),
 )
 
 cur = conn.cursor()
