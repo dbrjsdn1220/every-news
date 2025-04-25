@@ -7,8 +7,9 @@ import router from "@/router";
 import LeftArrow from "@/components/icon/LeftArrow.svg";
 import ArticlePreview from "@/components/ArticlePreview.vue";
 import { onMounted } from "vue";
-import axios from "axios";
 import { useRoute } from "vue-router";
+import api from "@/utils/axios";
+
 
 const route = useRoute();
 const news = ref();
@@ -24,11 +25,12 @@ onMounted(async () => {
   const { id } = route.params;
 
   try {
-    const res = await axios.get(`http://localhost:8000/news/detail/${id}/`);
+    const res = await api.get(`http://localhost:8000/news/detail/${id}/`);
     news.value = res.data;
     likeCount.value = res.data.article_interaction?.likes || 0;
 
-    const relatedRes = await axios.get(`http://localhost:8000/news/detail/${id}/related/`);
+    const relatedRes = await api.get(`http://localhost:8000/news/detail/${id}/related/`);
+    console.log("📎 관련 기사 응답:", relatedRes.data); 
     relatedNews.value = relatedRes.data;
   } catch (err) {
     console.error("기사 상세 조회 실패:", err);

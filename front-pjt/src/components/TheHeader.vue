@@ -1,13 +1,29 @@
 <script setup>
 import { RouterLink, useRouter } from "vue-router";
+import { ref, watchEffect } from "vue";
 
 const router = useRouter();
+
+// 로그인 상태를 추적하는 반응형 변수
+const isAuthenticated = ref(false);
+
+// localStorage에 access 토큰이 있는지 계속 감시
+watchEffect(() => {
+  isAuthenticated.value = !!localStorage.getItem("access");
+});
 
 const refreshPage = (event) => {
   event.preventDefault();
   router.push("/").then(() => {
     window.location.reload();
   });
+};
+
+const logout = () => {
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  isAuthenticated.value = false;
+  router.push("/login");
 };
 </script>
 
@@ -21,10 +37,13 @@ const refreshPage = (event) => {
       <nav class="menus">
         <router-link to="/news">나만의 뉴스 큐레이팅</router-link>
         <router-link to="/dashboard">대시보드</router-link>
+        <router-link v-if="!isAuthenticated" to="/login">로그인</router-link>
+        <button v-else @click="logout" class="logout-btn">로그아웃</button>
       </nav>
     </header>
   </div>
 </template>
+
 
 <style scoped lang="scss">
 .header__container {

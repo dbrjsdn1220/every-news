@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Article
 from .serializers import ArticleListSerializer
-from django.http import JsonResponse
+from django.contrib.auth.models import User
+
 
 
 # 전체 기사 리스트
