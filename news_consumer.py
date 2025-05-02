@@ -4,6 +4,7 @@ from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream.connectors import FlinkKafkaConsumer
 from pyflink.common.typeinfo import Types
+from datetime import datetime
 from dotenv import load_dotenv
 import json
 import os
@@ -94,8 +95,24 @@ def process_and_save(news_json):
 
     save_to_postgres(data)
 
-    return json.dumps(data, ensure_ascii=False)
+    # 날짜 추출
+    write_date = datetime.now().strftime("%Y-%m-%d")
+    file_path = f"./data/{write_date}.json"
+    os.makedirs("data", exist_ok=True)
 
+    # 해당 날짜의 JSON 파일이 이미 있으면 기존 내용에 추가
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            existing_data = json.load(f)
+    else:
+        existing_data = []
+
+    existing_data.append(data)
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(existing_data, f, ensure_ascii=False, indent=2)
+
+    return json.dumps(data, ensure_ascii=False)
 
 # 4. Flink 데이터 흐름 연결
 stream = env.add_source(consumer)
