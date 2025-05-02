@@ -73,13 +73,12 @@ conn = psycopg2.connect(
 > dc:date -> date 로 수정   
 2025-04-11T09:16:00+09:00 을 2025-04-11 09:16 과 같은 가공된 형태로 변경 (datetime) 라이브러리 사용
 
-
 - writer
 > "홍길동 기자 abcd123@kyunghyang.com" 에서 이름만 추출하고자 split("기자")[0].strip() 를 사용해 전처리 진행
 
 - content
-> 본문 내용은 feedparser 로 가져올 수가 없어서 BeautifulSoup을 활용해서 크롤링을 따로 해줌
-
+> 경향 신문 본문 내용은 feedparser 로 가져올 수가 없어서 BeautifulSoup을 활용해서 크롤링을 따로 해줌<br>
+> 오 마이 뉴스 신문의 내용은 description에서 확인이 가능한데, html 태그와 전체 내용보기라는 글자가 포함되어 따로 제거해줌.
 
 </br>
 

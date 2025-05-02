@@ -47,8 +47,14 @@ def save_to_db(data):
 # 작성자 정보 전처리하는 함수
 def clean_writer(raw_writer):
     # '기자'를 기준으로 자르고 공백 제거
+    if "선임기자" in raw_writer:
+        raw_writer = raw_writer.split("선임기자")[0].strip()
     if "기자" in raw_writer:
-        return raw_writer.split("기자")[0].strip()
+        raw_writer = raw_writer.split("기자")[0].strip()
+    if "특파원" in raw_writer:
+        if "|" in raw_writer:
+            raw_writer = raw_writer.split("|")[1].strip()
+        raw_writer = raw_writer.split("특파원")[0].strip()
     return raw_writer.strip()
 
 
