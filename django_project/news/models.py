@@ -1,5 +1,6 @@
 from django.db import models
 from pgvector.django import VectorField
+from django.contrib.auth.models import User
 
 # Create your models here.
 class Article(models.Model):
@@ -11,3 +12,11 @@ class Article(models.Model):
     url = models.CharField(max_length=200, unique=True)
     keywords = models.JSONField(default=list)
     embedding = VectorField(dimensions=1536)
+
+
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+    
+    class Meta:
+        unique_together = ('user', 'article')

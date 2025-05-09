@@ -97,7 +97,7 @@ def process_and_save(news_json):
 
     # 날짜 추출
     write_date = datetime.now().strftime("%Y-%m-%d")
-    file_path = f"./data/{write_date}.json"
+    file_path = f"./batch/data/{write_date}.json"
     os.makedirs("data", exist_ok=True)
 
     # 해당 날짜의 JSON 파일이 이미 있으면 기존 내용에 추가
