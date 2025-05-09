@@ -12,6 +12,7 @@ class Article(models.Model):
     url = models.CharField(max_length=200, unique=True)
     keywords = models.JSONField(default=list)
     embedding = VectorField(dimensions=1536)
+    views = models.IntegerField(default=0)
 
 
 class Like(models.Model):
@@ -20,3 +21,9 @@ class Like(models.Model):
     
     class Meta:
         unique_together = ('user', 'article')
+
+
+class ViewHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+    viewed_at = models.DateTimeField(auto_now_add=True)

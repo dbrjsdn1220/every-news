@@ -29,16 +29,10 @@ def genre_article_list(request, type):
 def article_detail(request, article_id):
 	if request.method == 'GET':
 		article = Article.objects.get(id=article_id)
-		serializer = ArticleListSerializer(article)
-		return Response(serializer.data, status=status.HTTP_200_OK)
+		article.views += 1
+		article.save(update_fields=['views'])
 
-# 같은 장르의 기사 5개
-@api_view(['GET'])
-def related_articles(request, article_id):
-	if request.method == 'GET':
-		current_article = Article.objects.get(id=article_id)
-		related = Article.objects.filter(category=current_article.category).exclude(id=id)[:5]
-		serializer = ArticleListSerializer(related, many=True)
+		serializer = ArticleListSerializer(article)
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 # 특정 기사 좋아요 누르기
