@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 @api_view(['GET'])
 def article_list(request):
 	if request.method == 'GET':
-		articles = Article.objects.all()
+		articles = Article.objects.all().order_by('-write_date')
 		serializer = ArticleListSerializer(articles, many=True)
 		return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -20,7 +20,7 @@ def article_list(request):
 @api_view(['GET'])
 def genre_article_list(request, type):
 	if request.method == 'GET':
-		articles = Article.objects.filter(category=type)
+		articles = Article.objects.filter(category=type).order_by('-write_date')
 		serializer = ArticleListSerializer(articles, many=True)
 		return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -34,6 +34,19 @@ def article_detail(request, article_id):
 
 		serializer = ArticleListSerializer(article)
 		return Response(serializer.data, status=status.HTTP_200_OK)
+	
+# 특정 기사 내용 기반 관련 기사 TOP5
+@api_view(['GET'])
+def article_detail_related(request, article_id):
+	if request.method == 'GET':
+		article = Article.objects.get(id=article_id)
+
+		# 유사도 기준 TOP 5
+		related_articles = Article.objects.exclude(id=target_article.id).order_by(
+			'embedding'  # pgvector 확장 설치 시 가능
+		).annotate(
+			similarity=models.functions.CosineSimilarity('embedding', target_article.embedding)
+		).order_by('-similarity')[:5]
 	
 # 특정 기사 좋아요 누르기
 @api_view(['POST'])

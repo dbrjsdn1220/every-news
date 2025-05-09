@@ -5,7 +5,7 @@ from .models import Article, Like
 class ArticleListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
-        fields = '__all__'
+        exclude = ['embedding']
 
 class LikeListSerializer(serializers.ModelSerializer):
     class Meta:
