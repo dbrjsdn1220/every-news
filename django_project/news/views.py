@@ -41,6 +41,20 @@ def related_articles(request, article_id):
 		serializer = ArticleListSerializer(related, many=True)
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
+# 특정 기사 좋아요 누르기
+@api_view(['POST'])
+def user_like_article(request):
+	if request.method == 'POST':
+		user_id = request.POST.get('user_id')
+		article_id = request.POST.get('article_id')
+		
+		exists = Like.objects.filter(user_id=user_id, article_id=article_id).exists()
+		if exists:
+			return Response({'message': 'Already liked'}, status=status.HTTP_200_OK)
+		
+		Like.objects.create(user_id=user_id, article_id=article_id)
+		return Response({'message': 'Like added'}, status=status.HTTP_201_CREATED)
+	
 # 사용자가 누른 좋아요 리스트
 @api_view(['GET'])
 def user_liked_articles_list(request, user_id):
@@ -56,14 +70,3 @@ def article_liked_users_list(request, article_id):
 		liked_users = Like.objects.filter(article_id=article_id)
 		serializer = LikeListSerializer(liked_users, many=True)
 		return Response(serializer.data, status=status.HTTP_200_OK)
-	
-# 특정 기사 좋아요 누르기
-@api_view(['POST'])
-def user_like_article(request, user_id, article_id):
-	if request.method == 'POST':
-		exists = Like.objects.filter(user_id=user_id, article_id=article_id).exists()
-		if exists:
-			return Response({'message': 'Already liked'}, status=status.HTTP_200_OK)
-		
-		Like.objects.create(user_id=user_id, article_id=article_id)
-		return Response({'message': 'Like added'}, status=status.HTTP_201_CREATED)
