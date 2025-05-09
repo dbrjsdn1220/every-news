@@ -5,6 +5,7 @@ from rest_framework import status
 from .models import Article, Like
 from .serializers import ArticleListSerializer, LikeListSerializer
 from django.contrib.auth.models import User
+from pgvector.django import CosineDistance
 
 
 
@@ -41,12 +42,12 @@ def article_detail_related(request, article_id):
 	if request.method == 'GET':
 		article = Article.objects.get(id=article_id)
 
-		# 유사도 기준 TOP 5
-		related_articles = Article.objects.exclude(id=target_article.id).order_by(
-			'embedding'  # pgvector 확장 설치 시 가능
-		).annotate(
-			similarity=models.functions.CosineSimilarity('embedding', target_article.embedding)
-		).order_by('-similarity')[:5]
+		related_articles = Article.objects.exclude(id=article.id).order_by('embedding').annotate(
+			similarity=CosineDistance('embedding', article.embedding)
+		).order_by('-similarity')[:5]  # 유사도 기준 내림차순 5개
+
+		serializer = ArticleListSerializer(related_articles, many=True)
+		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 # 특정 기사 좋아요 누르기
 @api_view(['POST'])
