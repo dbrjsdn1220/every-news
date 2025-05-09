@@ -1,12 +1,12 @@
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Article, Like
+from .models import Article, Like, ViewHistory
 from .serializers import ArticleListSerializer, LikeListSerializer
 from django.contrib.auth.models import User
 from pgvector.django import CosineDistance
-
 
 
 # 전체 기사 리스트
@@ -27,11 +27,16 @@ def genre_article_list(request, type):
 
 # 특정 기사 자세히
 @api_view(['GET'])
+@permission_classes([AllowAny]) 
 def article_detail(request, article_id):
 	if request.method == 'GET':
 		article = Article.objects.get(id=article_id)
 		article.views += 1
 		article.save(update_fields=['views'])
+
+		# 로그인된 사용자일 때만 ViewHistory 생성
+		if request.user.is_authenticated:
+			ViewHistory.objects.create(user_id=request.user, article_id=article.id)
 
 		serializer = ArticleListSerializer(article)
 		return Response(serializer.data, status=status.HTTP_200_OK)
@@ -51,6 +56,7 @@ def article_detail_related(request, article_id):
 	
 # 특정 기사 좋아요 누르기
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def user_like_article(request):
 	if request.method == 'POST':
 		user_id = request.POST.get('user_id')
