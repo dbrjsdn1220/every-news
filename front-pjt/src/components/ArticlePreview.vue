@@ -5,7 +5,16 @@ import { useDate } from "@/composables/useDate";
 import { defineProps, computed } from "vue";
 import { RouterLink } from "vue-router";
 
-const props = defineProps();
+const props = defineProps({
+  news: {
+    type: Object,
+    required: true
+  },
+  to: {
+    type: String,
+    default: null
+  }
+});
 
 const { formatDate } = useDate();
 const linkComponent = computed(() => (props.to ? RouterLink : "div"));
@@ -17,7 +26,11 @@ const hasInteraction = computed(() => {
 </script>
 
 <template>
-  <component :is="linkComponent" v-bind="props.to ? { to: props.to } : {}">
+  <component
+    :is="linkComponent"
+    v-bind="to ? { to: to } : {}"
+    v-if="news && news.title"
+  >
     <ContentBox>
       <div class="top">
         <h1>{{ props.news.title }}</h1>
@@ -35,7 +48,7 @@ const hasInteraction = computed(() => {
             ❤️ {{ props.news.article_interaction?.likes }}
           </div>
           <div>
-            👀 {{ props.news.article_interaction?.read }}
+            👀 {{ props.news.views ?? 0 }}
           </div>
         </div>
       </div>

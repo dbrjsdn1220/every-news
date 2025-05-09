@@ -28,14 +28,51 @@ onMounted(async () => {
     const res = await api.get(`http://localhost:8000/news/detail/${id}/`);
     news.value = res.data;
     likeCount.value = res.data.article_interaction?.likes || 0;
+    liked.value = res.data.article_interaction?.liked ?? false;
 
     const relatedRes = await api.get(`http://localhost:8000/news/detail/${id}/related/`);
-    console.log("📎 관련 기사 응답:", relatedRes.data); 
     relatedNews.value = relatedRes.data;
   } catch (err) {
     console.error("기사 상세 조회 실패:", err);
   }
 });
+
+
+const toggleLike = async () => {
+  if (!localStorage.getItem("access") || !localStorage.getItem("user_id")) {
+    alert("로그인 후 사용할 수 있습니다.");
+    return;
+  }
+
+  const { id } = route.params;
+  const user_id = localStorage.getItem("user_id");
+
+  try {
+    const formData = new FormData();
+    formData.append("user_id", user_id);
+    formData.append("article_id", id);
+
+    const response = await api.post("http://localhost:8000/news/like/", formData, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access")}`,
+      },
+    });
+
+    // 서버가 "Already liked"만 보내는 방식이라면 toggle이 안 되니
+    if (response.data.message === "Like added") {
+      liked.value = true;
+      likeCount.value += 1;
+    } else if (response.data.message === "Already liked") {
+      alert("이미 좋아요를 누르셨습니다.");
+    }
+
+    isAnimating.value = true;
+    setTimeout(() => (isAnimating.value = false), 600);
+  } catch (err) {
+    console.error("좋아요 요청 실패", err);
+  }
+};
+
 </script>
 
 <template>
@@ -72,18 +109,18 @@ onMounted(async () => {
 
           <div class="article__content__footer">
             <div class="article__content__emoji">
-              <span class="emoji-btn">
+              <div class="emoji-btn">
                 <span v-if="liked">❤️</span>
                 <span v-else>🤍</span>
-                {{ news?.article_interaction?.likes ?? 0 }}
-              </span>
+                {{ likeCount }}
+              </div>
               <div class="emoji-btn">
                 <span class="content__emoji-eye">👀</span>
-                {{ news?.article_interaction?.read ?? 0 }}
+                {{ news?.views }}
               </div>
               <a :href="news.url">📄</a>
             </div>
-            <button class="emoji-btn">
+            <button class="emoji-btn" @click="toggleLike">
               <span>{{ liked ? "❤️" : "🤍" }} 좋아요</span>
             </button>
             <!-- 애니메이션 하트 -->
@@ -99,8 +136,14 @@ onMounted(async () => {
 
     <ContentBox class="sidebar">
       <h1 class="sidebar__title">📰 관련 기사</h1>
-      <div v-for="(news, index) in relatedNews" :key="index">
-        <ArticlePreview :to="`/news/${news.id}`" :news="news" />
+      <div
+        v-for="(item, index) in relatedNews"
+        :key="item.id"
+      >
+        <ArticlePreview
+          :to="`/news/${item.id}`"
+          :news="item"
+        />
       </div>
     </ContentBox>
   </div>

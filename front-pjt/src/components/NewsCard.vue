@@ -30,7 +30,7 @@ const date = computed(() => formatDate(props.data.write_date));
     </RouterLink>
     <div class="stats">
       <span>❤️ {{ props.data.article_interaction?.likes || 0 }}</span>
-      <span>👀 {{ props.data.article_interaction?.read || 0 }}</span>
+      <span>👀 {{ props.data.views ?? 0 }}</span>
       <a :href="props.data.url">📄</a>
     </div>
 
