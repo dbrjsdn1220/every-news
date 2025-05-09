@@ -22,6 +22,23 @@ ChartJS.register(
   Legend
 );
 
+const isLoggedIn = ref(!!localStorage.getItem("access"));
+
+onMounted(async () => {
+  if (isLoggedIn.value) {
+    try {
+      const response = await axios.get("/like/user/<int:user_id>/", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access")}`,
+        },
+      });
+      favoriteArticles.value = response.data;
+    } catch (error) {
+      console.error("좋아요 기사 불러오기 실패", error);
+    }
+  }
+});
+
 const props = defineProps();
 
 const categoryData = ref({
@@ -180,13 +197,15 @@ const relatedNews = ref(null);
         <Bar :data="readData" :options="readBarOptions" />
       </ContentBox>
 
-      <ContentBox class="like-news">
+      <ContentBox class="like-news" v-if="isLoggedIn">
         <h1>❤️ 좋아요 누른 기사</h1>
         <p class="card_description">
-          내가 좋아요를 누른 기사들의 목록을 한곳에서 모아보고 다시 찾아볼 수
-          있습니다.
+          내가 좋아요를 누른 기사들의 목록을 한곳에서 모아보고 다시 찾아볼 수 있습니다.
         </p>
-        <div v-for="(article, index) in favoriteArticles" :key="index">
+        <div v-if="favoriteArticles.length === 0">
+          아직 좋아요한 기사가 없습니다.
+        </div>
+        <div v-else v-for="(article, index) in favoriteArticles" :key="index">
           <ArticlePreview :to="`/news/${article.id}`" :news="article" />
         </div>
       </ContentBox>
