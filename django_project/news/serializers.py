@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Article, Like
+from .models import Article, LikeHistory, ViewHistory
 
 
 class ArticleListSerializer(serializers.ModelSerializer):
@@ -7,7 +7,12 @@ class ArticleListSerializer(serializers.ModelSerializer):
         model = Article
         exclude = ['embedding']
 
-class LikeListSerializer(serializers.ModelSerializer):
+class LikedListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Like
+        model = LikeHistory
+        fields = '__all__'
+
+class ViewedListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ViewHistory
         fields = '__all__'

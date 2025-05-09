@@ -15,10 +15,11 @@ class Article(models.Model):
     views = models.IntegerField(default=0)
 
 
-class Like(models.Model):
+class LikeHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
-    
+    liked_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         unique_together = ('user', 'article')
 
