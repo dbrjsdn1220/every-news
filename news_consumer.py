@@ -10,7 +10,7 @@ import json
 import os
 import psycopg2
 
-from openapi import (
+from openai_api import (
     transform_classify_category,
     transform_extract_keywords,
     transform_to_embedding,
