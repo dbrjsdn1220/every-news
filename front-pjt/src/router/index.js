@@ -3,6 +3,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import NewsView from "@/views/NewsView.vue";
 import NewsDetailView from "@/views/NewsDetailView.vue";
 import DashBoardView from "@/views/DashBoardView.vue";
+// import NewsView from "@/views/NewsView.vue";
+console.log("NewsView 컴포넌트:", NewsView);
 
 const router = createRouter({
   history: createWebHistory("/"),
@@ -17,11 +19,11 @@ const router = createRouter({
       component: NewsView,
     },
     {
-      path: "/news/:id",
+      path: "/api/news/:id",
       name: "newsDetail",
       component: NewsDetailView,
       props: true,
-      meta: { requiresAuth: true },
+      // meta: { requiresAuth: true },
     },
     {
       path: "/dashboard",
@@ -44,6 +46,18 @@ const router = createRouter({
       component: () => import("@/views/LoginView.vue"),
     }
   ],
+});
+
+router.beforeEach((to, from, next) => {
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const isAuthenticated = !!localStorage.getItem("access");
+
+  if (requiresAuth && !isAuthenticated) {
+    alert("로그인 후 사용할 수 있습니다.");
+    next("/login");
+  } else {
+    next();
+  }
 });
 
 export default router;

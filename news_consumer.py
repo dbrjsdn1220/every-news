@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 import json
 import os
 import psycopg2
-
+import subprocess
+from elasticsearch import Elasticsearch
 from openai_api import (
     transform_classify_category,
     transform_extract_keywords,
@@ -19,6 +20,9 @@ from openai_api import (
 # 1. 환경 설정
 load_dotenv()
 env = StreamExecutionEnvironment.get_execution_environment()
+
+# Elasticsearch 클라이언트 초기화
+es = Elasticsearch("http://localhost:9200")
 
 # Kafka connector JAR 등록
 kafka_connector_path = os.getenv("KAFKA_CONNECTOR_PATH")
@@ -48,9 +52,9 @@ def save_to_postgres(data):
 
     cursor.execute(
         """
-        INSERT INTO news_article (title, writer, write_date, category, content, url, keywords, embedding)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (url) DO NOTHING
+        INSERT INTO news_article (title, writer, write_date, category, content, url, keywords, embedding, views)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (url) DO NOTHING RETURNING id
         """,
         (
             data["title"],
@@ -61,17 +65,82 @@ def save_to_postgres(data):
             data["url"],
             json.dumps(data["keywords"], ensure_ascii=False),
             json.dumps(data["embedding"]),
+            0,
         ),
     )
-    print(data["title"])
+    row = cursor.fetchone()
+    article_id = row[0] if row else -1
+
     conn.commit()
     cursor.close()
     conn.close()
 
+    print(article_id, data["title"])
+    if article_id != -1:
+        print("PostgreSQL, ", end='')
+    return article_id
+
+
+def save_to_elasticsearch(id, data):
+    es = Elasticsearch("http://localhost:9200")
+    try:
+        es.index(
+            index="news",
+            document={
+                "id": id,
+                "title": data["title"],
+                "writer": data["writer"],
+                "category": data["category"],
+                "write_date": datetime.strptime(data["write_date"], "%Y-%m-%d %H:%M"),
+                "content": data["content"],
+                "url": data["url"],
+                "keywords": data["keywords"],
+            }
+        )
+        print("ElasticSearch, ", end='')
+    except Exception as e:
+        print(f"ElasticSearch 저장 중 오류 발생: {e}")
+
+
+def save_to_json(data):
+    write_date = datetime.now().strftime("%Y-%m-%d")
+    file_path = f"./batch/data/{write_date}.json"
+    os.makedirs("./batch/data", exist_ok=True)
+
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            existing_data = json.load(f)
+    else:
+        existing_data = []
+
+    # embedding 제거하고 저장
+    data_to_save = data.copy()
+    if "embedding" in data_to_save:
+        del data_to_save["embedding"]
+
+    existing_data.append(data_to_save)
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(existing_data, f, ensure_ascii=False, indent=2)
+    
+    print("Json, ", end='')
+
+
+def save_to_hdfs(data):
+    write_date = datetime.now().strftime("%Y-%m-%d")
+    file_path = f"./batch/data/{write_date}.json"
+    hdfs_path = f"/news/{write_date}.json"
+
+    if os.path.exists(file_path):
+        subprocess.run(["hdfs", "dfs", "-mkdir", "-p", "/news"])
+        subprocess.run(["hdfs", "dfs", "-put", "-f", file_path, hdfs_path])
+    
+    print("HDFS 저장 완료")
+
+
 
 # 3. Kafka에서 가져온 데이터를 전처리하고 저장하는 함수
 def process_and_save(news_json):
-    """Kafka에서 받은 뉴스 데이터를 전처리하고 PostgreSQL에 저장하는 함수"""
     news = json.loads(news_json)
 
     content = news.get("content", "")
@@ -92,27 +161,12 @@ def process_and_save(news_json):
         "keywords": keywords,
         "embedding": embedding,
     }
+    article_id = save_to_postgres(data)
+    if article_id != -1:
+        save_to_elasticsearch(article_id, data)
+        save_to_json(data)
+        save_to_hdfs(data)
 
-    save_to_postgres(data)
-
-    # 날짜 추출
-    write_date = datetime.now().strftime("%Y-%m-%d")
-    file_path = f"./batch/data/{write_date}.json"
-    os.makedirs("data", exist_ok=True)
-
-    # 해당 날짜의 JSON 파일이 이미 있으면 기존 내용에 추가
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            existing_data = json.load(f)
-    else:
-        existing_data = []
-
-    existing_data.append(data)
-
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(existing_data, f, ensure_ascii=False, indent=2)
-
-    return json.dumps(data, ensure_ascii=False)
 
 # 4. Flink 데이터 흐름 연결
 stream = env.add_source(consumer)

@@ -10,7 +10,7 @@ default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=1),
 }
 
 with DAG(
@@ -23,11 +23,9 @@ with DAG(
     tags=['daily', 'report', 'spark']
 ) as dag:
     
-    submit_spark_job = SparkSubmitOperator(
+    submit_spark_job = BashOperator(
         task_id='spark_daily_report',
-        application='/opt/airflow/dags/scripts/spark_daily_report.py',
-        conn_id='spark_default',
-        application_args=['--date', '{{ ds }}'],
+        bash_command='spark-submit --master local[*] /opt/airflow/dags/scripts/spark_daily_report.py --date {{ ds }}'
     )
 
     notify_report_generated = BashOperator(

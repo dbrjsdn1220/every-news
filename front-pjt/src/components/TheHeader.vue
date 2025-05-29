@@ -1,13 +1,13 @@
 <script setup>
 import { RouterLink, useRouter } from "vue-router";
 import { ref, watchEffect } from "vue";
+import SearchBar from "@/components/SearchBar.vue";
 
 const router = useRouter();
 
 // 로그인 상태를 추적하는 반응형 변수
 const isAuthenticated = ref(false);
 
-// localStorage에 access 토큰이 있는지 계속 감시
 watchEffect(() => {
   isAuthenticated.value = !!localStorage.getItem("access");
 });
@@ -35,7 +35,9 @@ const logout = () => {
       </router-link>
 
       <nav class="menus">
-        <router-link to="/news">나만의 뉴스 큐레이팅</router-link>
+        <div style="flex:1"></div>
+        <!-- <SearchBar /> -->
+        <router-link to="/news" @click="refreshPage">나만의 뉴스 큐레이팅</router-link>
         <router-link to="/dashboard">대시보드</router-link>
         <router-link v-if="!isAuthenticated" to="/login">로그인</router-link>
         <button v-else @click="logout" class="logout-btn">로그아웃</button>

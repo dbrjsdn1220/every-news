@@ -51,11 +51,21 @@
         password: password1.value,
         });
 
-        localStorage.setItem("access", res.data.access);
-        localStorage.setItem("refresh", res.data.refresh);
+        console.log("로그인 응답:", res.data);
 
+        localStorage.setItem("access", res.data.key);
+
+        // 사용자 정보 요청
+        const userRes = await api.get("/accounts/user/", {
+          headers: {
+            Authorization: `Token ${res.data.key}`,
+          },
+        });
+        localStorage.setItem("user_id", userRes.data.pk);
+        localStorage.setItem("username", userRes.data.username);
+        
         alert("로그인 성공");
-
+        console.log("유저 정보:", userRes.data);
         router.push("news/"); // 메인페이지로 이동
     } catch (err) {
         error.value = "아이디 또는 비밀번호가 올바르지 않습니다.";
@@ -112,14 +122,14 @@
   }
   button {
     padding: 10px;
-    background: #272c97;
+    background: #8abfeb;
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
   }
   button:hover {
-    background: #1d227e;
+    background: #8abfeb;
   }
   .switch {
     text-align: center;
@@ -127,7 +137,7 @@
     font-size: 14px;
   }
   .switch span {
-    color: #272c97;
+    color: #3f5b72;
     font-weight: bold;
     cursor: pointer;
     margin-left: 5px;

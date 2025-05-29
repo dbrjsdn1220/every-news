@@ -2,15 +2,30 @@
 import { computed, useAttrs, defineProps } from "vue";
 import { useRouter } from "vue-router";
 
-const props = defineProps();
-const type = computed(() => props.type || "button");
-const size = computed(() => props.size || "md");
-const isActive = computed(() => props.isActive || false);
+const props = defineProps({
+  type: {
+    type: String,
+    default: "button"
+  },
+  size: {
+    type: String,
+    default: "md"
+  },
+  isActive: {
+    type: Boolean,
+    default: false
+  },
+  class: {
+    type: String,
+    default: ""
+  },
+  to: {
+    type: String,
+    default: ""
+  }
+});
 
 const router = useRouter();
-
-const buttonSizeClass = computed(() => size.value);
-const buttonTypeClass = computed(() => type.value);
 
 const attrs = useAttrs();
 
@@ -26,9 +41,9 @@ function handleClick() {
     :class="[
       'toggle-button',
       props.class,
-      buttonSizeClass,
-      buttonTypeClass,
-      { active: isActive },
+      props.size,
+      props.type,
+      { active: props.isActive }
     ]"
     v-bind="attrs"
     @click="handleClick"
@@ -42,12 +57,13 @@ function handleClick() {
   white-space: nowrap;
   padding: 10px 20px;
   font-size: 16px;
-  border: 1px solid #ccc;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   background-color: white;
-  color: var(--c-text);
+  color: #666;
   text-align: center;
   cursor: pointer;
+  transition: all 0.2s ease;
 
   &.tag {
     background-color: #f5f5f5;
@@ -56,31 +72,35 @@ function handleClick() {
     font-weight: 600;
   }
 
-  &.active {
-    background-color: #000;
-    color: #fff;
-
+  &.state {
     &:hover {
-      background-color: rgba(0, 0, 0, 0.8);
+      background-color: #f5f5f5;
     }
-  }
 
-  &:hover {
-    background-color: rgba(236, 236, 236, 0.5);
+    &.active {
+      background-color: #272c97;
+      color: white;
+      border-color: #272c97;
+
+      &:hover {
+        background-color: #1f2370;
+      }
+    }
   }
 
   &.sm {
     padding: 4px 10px;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   &.md {
     padding: 8px 12px;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   &:disabled {
     pointer-events: none;
+    opacity: 0.6;
   }
 }
 </style>

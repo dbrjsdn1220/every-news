@@ -8,12 +8,11 @@ const api = axios.create({
   },
 });
 
-// ✅ 요청 인터셉터: 요청 보낼 때마다 토큰 자동 첨부
 api.interceptors.request.use(
   (config) => {
     const accessToken = localStorage.getItem("access");
     if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+      config.headers.Authorization = `Token ${accessToken}`;
     }
     return config;
   },

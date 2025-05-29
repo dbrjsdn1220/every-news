@@ -1,36 +1,120 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import ContentBox from "@/common/ContentBox.vue";
 import NewsCard from "@/components/NewsCard.vue";
 import { tabs } from "@/assets/data/tabs";
 import PaginationButton from "@/common/PaginationButton.vue";
 import StateButton from "@/common/StateButton.vue";
+import SearchBar from "@/components/SearchBar.vue";
 import axios from 'axios'
 
+const route = useRoute();
+const router = useRouter();
+
 const newsList = ref([]);
-const sortBy = ref("latest");
-const activeTab = ref(tabs[0].id);
+const sortBy = ref(route.query.sort || "latest");
+const activeTab = ref(route.query.category || tabs[0].id);
 const currentPage = ref(1);
 const totalPages = ref(1);
+const username = ref(localStorage.getItem("username"));
 
+// URL 파라미터 업데이트 함수
+const updateUrlParams = () => {
+  const query = {
+    sort: sortBy.value,
+    category: activeTab.value === tabs[0].id ? undefined : activeTab.value
+  };
+  router.replace({ query: Object.fromEntries(Object.entries(query).filter(([_, v]) => v !== undefined)) });
+};
+
+// 뉴스 요청 함수
 const fetchNews = async () => {
-  try {
-    const selectedTab = tabs.find((tab) => tab.id === activeTab.value);
-    const category = selectedTab?.value || "";
+  if (route.query.q) {
+    // 실제 검색 API 호출
+    try {
+      const res = await axios.get(`http://localhost:8000/api/news/search/`, {
+        params: { q: route.query.q },
+        headers: {
+          Authorization: `Token ${localStorage.getItem("access")}`,
+        },
+      });
+      newsList.value = res.data.results || [];
+      console.log(`🔍 검색 결과: ${newsList.value.length}건`);
+    } catch (err) {
+      console.error("❌ 검색 실패:", err);
+      newsList.value = [];
+    }
+  } else {
+    try {
+      let endpoint = "";
+      const queryParams = new URLSearchParams();
 
-    const endpoint = category ? `http://localhost:8000/news/${encodeURIComponent(category)}/` : "http://localhost:8000/news/";
+      // 추천순 선택 시 추천 API 호출
+      if (sortBy.value === "recommend") {
+        endpoint = "http://localhost:8000/api/user/recommend/";
+      } else {
+        // 카테고리별 뉴스 요청
+        const selectedTab = tabs.find((tab) => tab.id === activeTab.value);
+        const category = selectedTab?.value || "";
+        endpoint = category
+          ? `http://localhost:8000/api/news/category/${encodeURIComponent(category)}/`
+          : "http://localhost:8000/api/news/";
+        
+        // 정렬 파라미터 추가
+        if (sortBy.value !== "latest") {
+          queryParams.append("sort", sortBy.value);
+        }
+      }
 
-    const res = await axios.get(endpoint);
+      const res = await axios.get(`${endpoint}?${queryParams.toString()}`, {
+        headers: {
+          Authorization: `Token ${localStorage.getItem("access")}`,
+        },
+      });
 
-    newsList.value = res.data;
-    console.log(`🟢 [${category || "전체"}] 뉴스 ${res.data.length}건`);
-  } catch (err) {
-    console.error("❌ 뉴스 불러오기 실패:", err);
+      newsList.value = res.data;
+      console.log(`🟢 [${sortBy.value}] 뉴스 ${res.data.length}건`);
+    } catch (err) {
+      console.error("❌ 뉴스 불러오기 실패:", err);
+    }
   }
 };
 
+// 페이지 로드 시 뉴스 불러오기
+onMounted(() => {
+  // URL 파라미터가 있으면 그 값을 사용
+  if (route.query.sort) {
+    sortBy.value = route.query.sort;
+  }
+  if (route.query.category) {
+    activeTab.value = route.query.category;
+  }
+  fetchNews();
+});
 
-onMounted(fetchNews);
+// 드롭다운(정렬기준) 변경 시 뉴스 다시 불러오기
+watch(sortBy, () => {
+  updateUrlParams();
+  fetchNews();
+});
+
+// 카테고리 변경 시 뉴스 다시 불러오기
+watch(activeTab, () => {
+  updateUrlParams();
+  fetchNews();
+});
+
+// URL 파라미터 변경 감지
+watch(() => route.query, (newQuery) => {
+  if (newQuery.sort && newQuery.sort !== sortBy.value) {
+    sortBy.value = newQuery.sort;
+  }
+  if (newQuery.category && newQuery.category !== activeTab.value) {
+    activeTab.value = newQuery.category;
+  }
+  fetchNews();
+}, { deep: true });
 
 </script>
 
@@ -59,6 +143,7 @@ onMounted(fetchNews);
         </StateButton>
       </ContentBox>
     </div>
+    <SearchBar />
     <ContentBox class="news__box">
       <div class="news__box__title-container">
         <div class="filters__container">
@@ -67,6 +152,9 @@ onMounted(fetchNews);
             <option value="recommend">추천순</option>
           </select>
         </div>
+      </div>
+      <div v-if="username">
+        <h1>📢 {{ username }} 님을 위한 뉴스 피드 </h1>
       </div>
       <div class="news__box__cards">
         <template v-for="news in newsList" :key="news?.id">
@@ -80,6 +168,13 @@ onMounted(fetchNews);
 </template>
 
 <style scoped lang="scss">
+.news__username {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 15px 0;
+  color: #444;
+}
+
 .news {
   display: flex;
   flex-direction: column;

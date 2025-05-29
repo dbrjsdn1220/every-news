@@ -17,7 +17,6 @@ const props = defineProps({
 });
 
 const { formatDate } = useDate();
-const linkComponent = computed(() => (props.to ? RouterLink : "div"));
 const hasInteraction = computed(() => {
   return (
     "article_interaction" in props.news && !!props.news.article_interaction
@@ -26,10 +25,9 @@ const hasInteraction = computed(() => {
 </script>
 
 <template>
-  <component
-    :is="linkComponent"
-    v-bind="to ? { to: to } : {}"
-    v-if="news && news.title"
+  <RouterLink
+    v-if="props.to"
+    :to="props.to"
   >
     <ContentBox>
       <div class="top">
@@ -53,7 +51,32 @@ const hasInteraction = computed(() => {
         </div>
       </div>
     </ContentBox>
-  </component>
+  </RouterLink>
+
+  <div v-else-if="news && news.title">
+     <ContentBox>
+      <div class="top">
+        <h1>{{ props.news.title }}</h1>
+      </div>
+      <div class="bottom">
+        <div>
+          <StateButton type="tag" size="sm">{{
+            props.news.writer
+          }}</StateButton>
+          {{ formatDate(new Date(props.news.write_date)) }}
+        </div>
+
+        <div v-if="hasInteraction" class="bottom__icons">
+          <div v-if="hasInteraction">
+            ❤️ {{ props.news.article_interaction?.likes }}
+          </div>
+          <div>
+            👀 {{ props.news.views ?? 0 }}
+          </div>
+        </div>
+      </div>
+    </ContentBox>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -76,5 +99,11 @@ const hasInteraction = computed(() => {
     display: flex;
     gap: 10px;
   }
+}
+
+a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 </style>

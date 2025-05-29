@@ -1,8 +1,7 @@
 <script setup>
 import StateButton from "@/common/StateButton.vue";
 import { useDate } from "@/composables/useDate";
-import { computed } from "vue";
-import { defineProps } from 'vue';
+import { computed, defineProps } from "vue";
 
 const props = defineProps({
   data: {
@@ -10,7 +9,7 @@ const props = defineProps({
     required: true
   }
 });
-
+console.log('props.data :', props.data)
 const { formatDate } = useDate();
 const date = computed(() => formatDate(props.data.write_date));
 </script>
@@ -18,19 +17,22 @@ const date = computed(() => formatDate(props.data.write_date));
 <template>
   <div class="card" v-if="props.data">
     <div class="card__header">
-      <StateButton type="state" size="sm" disabled>{{
-        props.data.category
-      }}</StateButton>
+      <StateButton type="state" size="sm" disabled>
+        {{ props.data.category }}
+      </StateButton>
       <span class="card__header-item">{{ props.data.writer }}</span>
-      <span class="card__header-item">{{ formatDate(props.data.write_date) }}</span>
+      <span class="card__header-item">{{ date }}</span>
     </div>
+
     <RouterLink :to="{ name: 'newsDetail', params: { id: props.data.id } }">
       <h2 class="title">{{ props.data.title }}</h2>
       <p class="description">{{ props.data.content }}</p>
     </RouterLink>
+
     <div class="stats">
-      <span>❤️ {{ props.data.article_interaction?.likes || 0 }}</span>
+      <span>❤️ {{ props.data.like_count ?? 0 }}</span>
       <span>👀 {{ props.data.views ?? 0 }}</span>
+      <span>💬 {{ props.data.comment_count ?? 0 }}</span>
       <a :href="props.data.url">📄</a>
     </div>
 

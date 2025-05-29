@@ -18,7 +18,14 @@ export default defineConfig({
     },
     server: {
         host: "0.0.0.0",
-        port: 3000
+        port: 3000,
+        proxy: {
+            '/api/chatbot': {
+                target: 'http://localhost:8000', // Django 서버 주소로 맞춰주세요
+                changeOrigin: true,
+                secure: false,
+            },
+        },
     },
     preview: {
         host: "0.0.0.0",

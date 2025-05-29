@@ -22,15 +22,15 @@ def main():
 
     # 3. 경로 설정
     FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
-    REALTIME_DIR = "data/realtime"
-    ARCHIVE_DIR = "data/news_archive"
-    REPORT_DIR = "data"
+    REALTIME_DIR = "/opt/airflow/data"
+    ARCHIVE_DIR = "/opt/airflow/data/news_archive"
+    REPORT_DIR = "/opt/airflow/data"
 
     INPUT_PATH = os.path.join(REALTIME_DIR, "*.json")
     REPORT_PATH = os.path.join(REPORT_DIR, f"daily_report_{report_date.strftime('%Y%m%d')}.pdf")
-    ARCHIVE_TARGET = os.path.join(ARCHIVE_DIR, report_date.strftime("%Y-%m-%d"))
+    ARCHIVE_TARGET = os.path.join(ARCHIVE_DIR)
 
-    # 4. 한글 폰트 설정
+    # 4. 한글 폰트 설정git 
     font_prop = fm.FontProperties(fname=FONT_PATH, size=12)
 
     # 5. Spark 세션 시작
