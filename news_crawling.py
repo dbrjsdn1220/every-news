@@ -40,7 +40,6 @@ def save_to_db(data):
             data["url"],
         ),
     )
-
     conn.commit()
 
 

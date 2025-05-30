@@ -4,9 +4,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Article, LikeHistory, ViewHistory, Highlight, CommentHistory
-from .serializers import (
-    ArticleListSerializer, LikeListSerializer, ViewListSerializer, CommentListSerializer
-)
+from .serializers import ArticleListSerializer, LikeListSerializer, ViewListSerializer, CommentListSerializer
 from django.db.models.functions import TruncDate
 from django.contrib.auth.models import User
 from pgvector.django import CosineDistance
@@ -199,12 +197,12 @@ def recommend_articles_for_user(request):
 	VIEW_WEIGHT = 1.0
 	user_id = request.user.id
 
-	# 1. 유저의 좋아요 및 조회 기사 ID 수집
+	# 유저의 좋아요 및 조회 기사 ID 수집
 	liked_article_ids = LikeHistory.objects.filter(user_id=user_id).values_list('article_id', flat=True)
 	viewed_article_ids = ViewHistory.objects.filter(user_id=user_id).values_list('article_id', flat=True)
 	exclude_ids = set(liked_article_ids).union(set(viewed_article_ids))
 
-	# 2. 유저 임베딩 계산 (가중 평균)
+	# 유저 임베딩 계산 (가중 평균)
 	weighted_vectors = []
 	
 	liked_articles = Article.objects.filter(id__in=liked_article_ids)
@@ -221,12 +219,12 @@ def recommend_articles_for_user(request):
 	weights = np.array([weight for _, weight in weighted_vectors])
 	user_embedding = np.sum(vectors, axis=0) / np.sum(weights)
 
-    # 3. 추천 기사 조회 (유사도 기반)
+    # 추천 기사 조회 (유사도 기반)
 	recommendations = Article.objects.exclude(id__in=exclude_ids)\
         .annotate(similarity=CosineDistance('embedding', user_embedding))\
         .order_by('similarity')
 
-    # 4. 직렬화 후 응답
+    # 직렬화 후 응답
 	serializer = ArticleListSerializer(recommendations, many=True)
 	return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -249,7 +247,6 @@ def search_articles(request):
             }
         }
     }
-    
     try:
         # 검색 실행
         response = es.search(

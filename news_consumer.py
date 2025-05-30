@@ -17,7 +17,7 @@ from openai_api import (
     transform_to_embedding,
 )
 
-# 1. 환경 설정
+# 환경 설정
 load_dotenv()
 env = StreamExecutionEnvironment.get_execution_environment()
 
@@ -39,46 +39,50 @@ consumer = FlinkKafkaConsumer(
 )
 
 
-# 2. PostgreSQL 저장 함수
+# PostgreSQL 저장 함수
 def save_to_postgres(data):
-    conn = psycopg2.connect(
-        host="localhost",
-        dbname="news",
-        user=os.getenv("DB_USERNAME"),
-        password=os.getenv("DB_PASSWORD"),
-        port=5432,
-    )
-    cursor = conn.cursor()
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            dbname="news",
+            user=os.getenv("DB_USERNAME"),
+            password=os.getenv("DB_PASSWORD"),
+            port=5432,
+        )
+        cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO news_article (title, writer, write_date, category, content, url, keywords, embedding, views)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (url) DO NOTHING RETURNING id
-        """,
-        (
-            data["title"],
-            data["writer"],
-            data["write_date"],
-            data["category"],
-            data["content"],
-            data["url"],
-            json.dumps(data["keywords"], ensure_ascii=False),
-            json.dumps(data["embedding"]),
-            0,
-        ),
-    )
-    row = cursor.fetchone()
-    article_id = row[0] if row else -1
+        cursor.execute(
+            """
+            INSERT INTO news_article (title, writer, write_date, category, content, url, keywords, embedding, views)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (url) DO NOTHING RETURNING id
+            """,
+            (
+                data["title"],
+                data["writer"],
+                data["write_date"],
+                data["category"],
+                data["content"],
+                data["url"],
+                json.dumps(data["keywords"], ensure_ascii=False),
+                json.dumps(data["embedding"]),
+                0,
+            ),
+        )
+        row = cursor.fetchone()
+        article_id = row[0] if row else -1
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-    print(article_id, data["title"])
-    if article_id != -1:
-        print("PostgreSQL, ", end='')
-    return article_id
+        print(article_id, data["title"])
+        if article_id != -1:
+            print("PostgreSQL, ", end='')
+        return article_id
+    
+    except Exception as e:
+        print(f"PostgreSQL 저장 중 오류 발생: {e}")
 
 
 def save_to_elasticsearch(id, data):
@@ -98,48 +102,55 @@ def save_to_elasticsearch(id, data):
             }
         )
         print("ElasticSearch, ", end='')
+        
     except Exception as e:
         print(f"ElasticSearch 저장 중 오류 발생: {e}")
 
 
 def save_to_json(data):
-    write_date = datetime.now().strftime("%Y-%m-%d")
-    file_path = f"./batch/data/{write_date}.json"
-    os.makedirs("./batch/data", exist_ok=True)
+    try:
+        write_date = datetime.now().strftime("%Y-%m-%d")
+        file_path = f"./batch/data/{write_date}.json"
+        os.makedirs("./batch/data", exist_ok=True)
 
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            existing_data = json.load(f)
-    else:
-        existing_data = []
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = []
 
-    # embedding 제거하고 저장
-    data_to_save = data.copy()
-    if "embedding" in data_to_save:
-        del data_to_save["embedding"]
+        # embedding 제거하고 저장
+        data_to_save = data.copy()
+        if "embedding" in data_to_save:
+            del data_to_save["embedding"]
 
-    existing_data.append(data_to_save)
+        existing_data.append(data_to_save)
 
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(existing_data, f, ensure_ascii=False, indent=2)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+        print("Json, ", end='')
     
-    print("Json, ", end='')
+    except Exception as e:
+        print(f"Json 파일 저장 중 오류 발생: {e}")
 
 
 def save_to_hdfs(data):
-    write_date = datetime.now().strftime("%Y-%m-%d")
-    file_path = f"./batch/data/{write_date}.json"
-    hdfs_path = f"/news/{write_date}.json"
+    try:
+        write_date = datetime.now().strftime("%Y-%m-%d")
+        file_path = f"./batch/data/{write_date}.json"
+        hdfs_path = f"/news/{write_date}.json"
 
-    if os.path.exists(file_path):
-        subprocess.run(["hdfs", "dfs", "-mkdir", "-p", "/news"])
-        subprocess.run(["hdfs", "dfs", "-put", "-f", file_path, hdfs_path])
+        if os.path.exists(file_path):
+            subprocess.run(["hdfs", "dfs", "-mkdir", "-p", "/news"])
+            subprocess.run(["hdfs", "dfs", "-put", "-f", file_path, hdfs_path])
+        print("HDFS 저장 완료")
     
-    print("HDFS 저장 완료")
+    except Exception as e:
+        print(f"HDFS 저장 중 오류 발생: {e}")
 
 
 
-# 3. Kafka에서 가져온 데이터를 전처리하고 저장하는 함수
+# Kafka에서 가져온 데이터를 전처리하고 저장하는 함수
 def process_and_save(news_json):
     news = json.loads(news_json)
 
@@ -168,11 +179,11 @@ def process_and_save(news_json):
         save_to_hdfs(data)
 
 
-# 4. Flink 데이터 흐름 연결
+# Flink 데이터 흐름 연결
 stream = env.add_source(consumer)
 
 # Kafka에서 읽은 데이터를 파싱 + 전처리 + DB 저장
 stream.map(lambda x: process_and_save(x), output_type=Types.STRING())
 
-# 5. Flink 작업 실행
+# Flink 작업 실행
 env.execute("Flink Kafka Consumer Job")
